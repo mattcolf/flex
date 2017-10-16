@@ -105,7 +105,7 @@ class FastRouteRouter implements RouterInterface
         $parts = parse_url(sprintf('http://test.com%s', $this->relativeUrlFor($route, $params)));
 
         $uri = $request->getUri();
-        $uri = $uri->withPath($parts[PHP_URL_PATH]);
+        $uri = $uri->withPath($parts['path']);
         $uri = $uri->withQuery(HttpUtility::buildQuery(array_merge(HttpUtility::parseQuery($parts[PHP_URL_QUERY] ?? ''), $query)));
         $uri = $uri->withFragment('');
 

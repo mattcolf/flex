@@ -136,7 +136,7 @@ class RouteLoader
             TypeValidation::validateType($name, 'string', static::ERR_ROUTE_NAME);
             TypeValidation::validateType($details, 'array', static::ERR_ROUTE_FORMAT);
 
-            if (isset($route[static::ROUTES])) {
+            if (isset($details[static::ROUTES])) {
                 $this->loadGroup($name, $details);
             } else {
                 $this->loadRoute($name, $details);
@@ -192,7 +192,6 @@ class RouteLoader
         TypeValidation::validateType($options, 'array', sprintf(static::ERR_ROUTE_FORMAT_OPTIONS, $name));
 
         foreach ($routes as $name => $route) {
-
             // merge group details into route details
             $route[static::PATH] = $path . $route[static::PATH] ?? '';
             $route[static::STACK] = array_merge($stack, $route[static::STACK] ?? []);
