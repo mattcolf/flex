@@ -85,30 +85,6 @@ class ContainerFactory
             return static::createErrorHandler($container);
         }, true);
 
-        //
-        // Interface Aliases
-        //
-
-//        $container->add(RequestInterface::class, ServerRequestInterface::class);
-
-        //
-        // Named Aliases
-        //
-
-//        $container->add(ContainerProxy::ROUTER, RouterInterface::class);
-//        $container->add(ContainerProxy::WRITER, WriterInterface::class);
-//        $container->add(ContainerProxy::WHOOPS, RunInterface::class);
-//        $container->add(ContainerProxy::REQUEST, ServerRequestInterface::class);
-//        $container->add(ContainerProxy::RESPONSE, ResponseInterface::class);
-//        $container->add(ContainerProxy::DISPATCHER, Dispatcher::class);
-//        $container->add(ContainerProxy::ROUTE_LOADER, RouteLoader::class);
-//        $container->add(ContainerProxy::ERROR_HANDLER, ErrorHandlerInterface::class);
-//        $container->add(ContainerProxy::CONTROLLER_NOT_FOUND, NotFoundController::class);
-//        $container->add(ContainerProxy::CONTROLLER_NOT_ALLOWED, NotAllowedController::class);
-
-        // Dependencies
-
-
 
         return $container;
     }

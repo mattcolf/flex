@@ -201,7 +201,7 @@ class ContainerProxy implements ContainerInterface
     {
         $writer = $this->get(static::WRITER);
 
-        TypeValidation::validateType($writer, WriterInterface::class,static::ERR_WRITER);
+        TypeValidation::validateType($writer, WriterInterface::class, static::ERR_WRITER);
 
         return $writer;
     }

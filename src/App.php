@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 namespace MattColf\Flex;
+
 use Throwable;
 use MattColf\Flex\Route\RouteDetails;
 use MattColf\Flex\Container\ContainerProxy;
