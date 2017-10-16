@@ -178,22 +178,44 @@ class BufferedWriter implements WriterInterface
      */
     private function sendStream(StreamInterface $stream, int $length = null) : void
     {
+        // @todo improve implementation to guarantee content-length is correct
+
         $out = fopen('php://output', 'w');
-
-        while (($length === null || $length > 0) && !$stream->eof()) {
-
-            $content = $stream->read(min($length, $length ?? (int)$this->getConfig(static::CHUNK_SIZE)));
-
-            fwrite($out, $content);
-
-            $length -= strlen($content);
-
-            // end output if the connection was closed
-            if (connection_status() !== CONNECTION_NORMAL) {
-                break;
-            };
-        }
-
+        fwrite($out, $stream->getContents());
         fclose($out);
+
+//        $out = fopen('php://output', 'w');
+//
+//        while (!$stream->eof() && $content = $stream->read((int)$this->getConfig(static::CHUNK_SIZE))) {
+//            fwrite($out, $content);
+//
+//            // end output if the connection was closed
+//            if (connection_status() !== CONNECTION_NORMAL) {
+//                break;
+//            };
+//        }
+//
+//        fclose($out);
+
+
+//        $out = fopen('php://output', 'w');
+//        $written = 0;
+//
+//        while (($length === 0 || $written < $length) && !$stream->eof()) {
+//
+//            $size = min($length - $written, (int)$this->getConfig(static::CHUNK_SIZE));
+//            $content = $stream->read($size);
+//
+//            fwrite($out, $content);
+//
+//            $written += strlen($content);
+//
+//            // end output if the connection was closed
+//            if (connection_status() !== CONNECTION_NORMAL) {
+//                break;
+//            };
+//        }
+//
+//        fclose($out);
     }
 }
