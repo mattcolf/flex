@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace MattColf\Flex\Container;
 
+use Interop\Http\Server\RequestHandlerInterface;
 use MattColf\Flex\Error\ErrorHandlerInterface;
 use MattColf\Flex\Http\ControllerInterface;
 use MattColf\Flex\Http\WriterInterface;
@@ -30,12 +31,11 @@ class ContainerProxy implements ContainerInterface
     const WHOOPS = 'whoops';
     const REQUEST = 'request';
     const RESPONSE = 'response';
-    const DISPATCHER = 'dispatcher';
     const ROUTE_LOADER = 'route_loader';
     const ERROR_HANDLER = 'error_handler';
+    const DEFAULT_CONTROLLER = 'default_controller';
     const CONTROLLER_NOT_FOUND = 'controller_not_found';
     const CONTROLLER_NOT_ALLOWED = 'controller_not_allowed';
-
 
     // Error Messages
     const ERR_ROUTER = 'Invalid router. Must be an instance of %s.';
@@ -43,10 +43,10 @@ class ContainerProxy implements ContainerInterface
     const ERR_WHOOPS = 'Invalid whoops. Must be an instance of %s.';
     const ERR_REQUEST = 'Invalid request. Must be an instance of %s.';
     const ERR_RESPONSE = 'Invalid response. Must be an instance of %s.';
-    const ERR_DISPATCHER = 'Invalid dispatcher. Must be an instance of %s.';
     const ERR_ROUTE_LOADER = 'Invalid route loader. Must be an instance of %s.';
     const ERR_ERROR_HANDLER = 'Invalid error handler. Must be an instance of %s.';
     const ERR_RESPONSE_EMITTER = 'Invalid response emitter. Must be an instance of %s.';
+    const ERR_DEFAULT_CONTROLLER = 'Invalid default controller. Must be an instance of %s.';
     const ERR_CONTROLLER_NOT_FOUND = 'Invalid not found controller. Must be an instance of %s.';
     const ERR_CONTROLLER_NOT_ALLOWED = 'Invalid not allowed controller. Must be an instance of %s.';
 
@@ -137,17 +137,17 @@ class ContainerProxy implements ContainerInterface
     }
 
     /**
-     * @return Dispatcher
+     * @return RequestHandlerInterface
      * @throws ContainerExceptionInterface
      * @throws NotFoundExceptionInterface
      */
-    public function getDispatcher() : Dispatcher
+    public function getDefaultController() : RequestHandlerInterface
     {
-        $dispatcher = $this->get(static::DISPATCHER);
+        $default = $this->get(static::DEFAULT_CONTROLLER);
 
-        TypeValidation::validateType($dispatcher, Dispatcher::class, static::ERR_DISPATCHER);
+        TypeValidation::validateType($default, RequestHandlerInterface::class, static::ERR_DEFAULT_CONTROLLER);
 
-        return $dispatcher;
+        return $default;
     }
 
     /**

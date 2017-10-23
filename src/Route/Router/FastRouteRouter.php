@@ -6,8 +6,9 @@ namespace MattColf\Flex\Route\Router;
 
 use FastRoute;
 use InvalidArgumentException;
-use MattColf\Flex\Route\RouteDetails;
+use MattColf\Flex\Route\Route;
 use MattColf\Flex\Route\RouterInterface;
+use MattColf\Flex\Route\RouterResult;
 use MattColf\Flex\Utility\ConfigTrait;
 use MattColf\Flex\Utility\HttpUtility;
 use Psr\Http\Message\ServerRequestInterface;
@@ -33,12 +34,12 @@ class FastRouteRouter implements RouterInterface
     /**
      * @var FastRoute\Dispatcher|null
      */
-    private $dispatcher;
+    private $dispatcher = null;
 
     /**
-     * @var array
+     * @var Route[]
      */
-    private $index;
+    private $routes = [];
 
     /**
      * @param FastRoute\RouteCollector $collection
@@ -51,8 +52,6 @@ class FastRouteRouter implements RouterInterface
         ]);
 
         $this->collection = $collection;
-        $this->dispatcher = null;
-        $this->index = [];
     }
 
     /**
@@ -69,11 +68,13 @@ class FastRouteRouter implements RouterInterface
      */
     public function relativeUrlFor(string $route, array $params = [], array $query = []) : string
     {
-        if (!isset($this->index[$route])) {
+        $route = $this->getRoute($route);
+
+        if ($route === null) {
             throw new InvalidArgumentException(sprintf(static::ERR_NO_ROUTE, $route));
         }
 
-        $path = $this->index[$route];
+        $path = $route->getPath();
 
         foreach ($params as $name => $value) {
             $path = preg_replace(sprintf('#{%s(:[^}]+){0,1}}#', $name), $value, $path);
@@ -115,46 +116,51 @@ class FastRouteRouter implements RouterInterface
     /**
      * Add a single route to the router
      *
-     * @param string $name
-     * @param string|string[] $method
-     * @param string $path
-     * @param callable[] $stack
-     * @param array $options
-     * @return void
+     * @param Route $route
      * @throws InvalidArgumentException
      */
-    public function addRoute(string $name, $method, string $path, array $stack, array $options = []) : void
+    public function addRoute(Route $route) : void
     {
-        $details = function () use ($name, $stack) {
-            return [$name, $stack];
-        };
+        $this->routes[$route->getName()] = $route;
 
-        $this->index[$name] = $path;
-        $this->collection->addRoute($method, $path, $details);
+        // reset the dispatcher when new routes are added
+        $this->dispatcher = null;
+
+        $this->collection->addRoute($route->getMethods(), $route->getPath(), function () use ($route) {
+            return $route;
+        });
+    }
+
+    /**
+     * Get a route by name
+     *
+     * @param string $name
+     * @return Route|null
+     */
+    public function getRoute(string $name) : ?Route
+    {
+        return $this->routes[$name] ?? null;
     }
 
     /**
      * Resolve the current route
      *
      * @param ServerRequestInterface $request
-     * @return RouteDetails
+     * @return RouterResult
      */
-    public function resolve(ServerRequestInterface $request) : RouteDetails
+    public function resolve(ServerRequestInterface $request) : RouterResult
     {
         $details = $this->getDispatcher()->dispatch($request->getMethod(), $request->getUri()->getPath());
 
         if ($details[0] === FastRoute\Dispatcher::NOT_FOUND) {
-            return new RouteDetails(RouteDetails::STATUS_NOT_FOUND);
+            return new RouterResult(RouterResult::STATUS_NOT_FOUND);
         }
 
         if ($details[0] === FastRoute\Dispatcher::METHOD_NOT_ALLOWED) {
-            return new RouteDetails(RouteDetails::STATUS_NOT_ALLOWED);
+            return new RouterResult(RouterResult::STATUS_NOT_ALLOWED);
         }
 
-        // @todo
-        $route = $details[1]();
-
-        return new RouteDetails(RouteDetails::STATUS_MATCH, $route[0], $route[1], $details[2]);
+        return new RouterResult(RouterResult::STATUS_MATCH, $details[1](), $details[2]);
     }
 
     /**

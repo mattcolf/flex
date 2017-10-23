@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace MattColf\Flex;
 
+use MattColf\Flex\Route\Stack;
 use Throwable;
-use MattColf\Flex\Route\RouteDetails;
+use MattColf\Flex\Route\Route;
 use MattColf\Flex\Container\ContainerProxy;
 use MattColf\Flex\Container\ContainerFactory;
 use MattColf\Flex\Utility\CallableResolver;
@@ -31,7 +32,7 @@ class App
     const DEFAULT_MIDDLEWARE = [];
 
     // Request Attributes
-    const ROUTE_NAME = 'route_name';
+    const ROUTE = 'route';
     const ROUTE_PARAMS = 'route_params';
     const ROUTE_STATUS = 'route_status';
 
@@ -70,12 +71,9 @@ class App
             static::MIDDLEWARE => static::DEFAULT_MIDDLEWARE
         ]);
 
+        $this->middleware = $this->getConfig(static::MIDDLEWARE);
+
         $this->container = new ContainerProxy($container);
-
-        $this->middleware = array_map(function ($reference) {
-            return CallableResolver::resolve($this->container, $reference);
-        }, $this->getConfig(static::MIDDLEWARE));
-
         $this->container->getRouteLoader()->load($this->getConfig(static::ROUTES));
     }
 
@@ -88,7 +86,7 @@ class App
         $writer->start();
 
         try {
-            $response = $this->execute($this->container->getRequest(), $this->container->getResponse());
+            $response = $this->execute($this->container->getRequest());
         } catch (Throwable $error) {
             throw $error;
             //$response = $this->container->getErrorHandler()->handle($error);
@@ -103,30 +101,34 @@ class App
      * Resolve the route and execute the stack
      *
      * @param ServerRequestInterface $request
-     * @param ResponseInterface $response
      * @return ResponseInterface
      * @throws ContainerExceptionInterface
      * @throws NotFoundExceptionInterface
      */
-    private function execute(ServerRequestInterface $request, ResponseInterface $response) : ResponseInterface
+    private function execute(ServerRequestInterface $request) : ResponseInterface
     {
-        $route = $this->container->getRouter()->resolve($request);
-        $dispatcher = $this->container->getDispatcher();
+        $result = $this->container->getRouter()->resolve($request);
+        $stack = $this->middleware;
 
-        $request = $request->withAttribute(static::ROUTE_NAME, $route->getName());
-        $request = $request->withAttribute(static::ROUTE_STATUS, $route->getStatus());
-        $request = $request->withAttribute(static::ROUTE_PARAMS, $route->getParams());
-
-        if ($route->getStatus() === RouteDetails::STATUS_NOT_FOUND) {
-            $controller = $this->container->getNotFoundController();
-            return $dispatcher->dispatch($request, $response, array_merge($this->middleware, [$controller]));
+        if ($result->isMatch()) {
+            $stack = array_merge($stack, $result->getRoute()->getStack());
         }
 
-        if ($route->getStatus() === RouteDetails::STATUS_NOT_ALLOWED) {
-            $controller = $this->container->getNotAllowedController();
-            return $dispatcher->dispatch($request, $response, array_merge($this->middleware, [$controller]));
+        if ($result->isNotFound()) {
+            $stack = array_merge($stack, [$this->container->getNotFoundController()]);
         }
 
-        return $dispatcher->dispatch($request, $response, array_merge($this->middleware, $route->getStack()));
+        if ($result->isNotAllowed()) {
+            $stack = array_merge($stack, [$this->container->getNotAllowedController()]);
+        }
+
+        $stack = new Stack($this->container->getDefaultController(), $stack);
+
+        $request = $this->container->getRequest();
+        $request = $request->withAttribute(static::ROUTE, $result->getRoute());
+        $request = $request->withAttribute(static::ROUTE_STATUS, $result->getStatus());
+        $request = $request->withAttribute(static::ROUTE_PARAMS, $result->getParams());
+
+        return $stack->handle($request);
     }
 }

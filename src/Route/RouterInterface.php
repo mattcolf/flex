@@ -41,21 +41,24 @@ interface RouterInterface
     /**
      * Add a single route to the router
      *
-     * @param string $name
-     * @param string|string[] $method
-     * @param string $path
-     * @param callable[] $stack
-     * @param array $options
-     * @return void
+     * @param Route $route
      * @throws InvalidArgumentException
      */
-    public function addRoute(string $name, $method, string $path, array $stack, array $options = []) : void;
+    public function addRoute(Route $route) : void;
+
+    /**
+     * Get a route by name
+     *
+     * @param string $name
+     * @return Route|null
+     */
+    public function getRoute(string $name) : ?Route;
 
     /**
      * Resolve the current route
      *
      * @param ServerRequestInterface $request
-     * @return RouteDetails
+     * @return RouterResult
      */
-    public function resolve(ServerRequestInterface $request) : RouteDetails;
+    public function resolve(ServerRequestInterface $request ) : RouterResult;
 }

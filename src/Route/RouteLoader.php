@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace MattColf\Flex\Route;
 
 use InvalidArgumentException;
-use MattColf\Flex\Utility\CallableResolver;
 use MattColf\Flex\Utility\TypeValidation;
 use Psr\Container\ContainerInterface;
 
@@ -72,7 +71,6 @@ class RouteLoader
     const PATH = 'path';
     const STACK = 'stack';
     const ROUTES = 'routes';
-    const OPTIONS = 'options';
 
     // Error Messages
     const ERR_ROUTE_NAME = 'Each route must have a string name.';
@@ -152,10 +150,10 @@ class RouteLoader
      */
     private function loadRoute(string $name, array $details)
     {
-        $method = $details[static::METHOD] ?? 'GET';
-        $options = $details[static::OPTIONS] ?? [];
+        $methods = $details[static::METHOD] ?? 'GET';
         $path = $details[static::PATH] ?? null;
         $stack = $details[static::STACK] ?? null;
+        $meta = $this->getMeta($details);
 
         if (!is_string($path)) {
             throw new InvalidArgumentException(sprintf(static::ERR_ROUTE_MISSING_PATH, $name));
@@ -165,12 +163,11 @@ class RouteLoader
             throw new InvalidArgumentException(sprintf(static::ERR_ROUTE_MISSING_STACK, $name));
         }
 
-        TypeValidation::validateType($method, 'string|string[]', sprintf(static::ERR_ROUTE_FORMAT_METHOD, $name));
+        TypeValidation::validateType($methods, 'string|string[]', sprintf(static::ERR_ROUTE_FORMAT_METHOD, $name));
         TypeValidation::validateType($path, 'string', sprintf(static::ERR_ROUTE_FORMAT_PATH, $name));
         TypeValidation::validateType($stack, 'array', sprintf(static::ERR_ROUTE_FORMAT_STACK, $name));
-        TypeValidation::validateType($options, 'array', sprintf(static::ERR_ROUTE_FORMAT_OPTIONS, $name));
 
-        $this->router->addRoute($name, $method, $path, $this->resolveStack($stack), $options);
+        $this->router->addRoute(new Route($name, (array) $methods, $path, $stack, $meta));
     }
 
     /**
@@ -182,35 +179,31 @@ class RouteLoader
     private function loadGroup(string $name, array $details)
     {
         $routes = $details[static::ROUTES] ?? [];
-        $options = $details[static::OPTIONS] ?? [];
         $path = $details[static::PATH] ?? '';
         $stack = $details[static::STACK] ?? [];
 
+        TypeValidation::validateType($routes, 'array', sprintf(static::ERR_ROUTE_FORMAT_ROUTES, $name));
         TypeValidation::validateType($path, 'string', sprintf(static::ERR_ROUTE_FORMAT_PATH, 'group '.$name));
         TypeValidation::validateType($stack, 'array', sprintf(static::ERR_ROUTE_FORMAT_STACK, 'group'.$name));
-        TypeValidation::validateType($routes, 'array', sprintf(static::ERR_ROUTE_FORMAT_ROUTES, $name));
-        TypeValidation::validateType($options, 'array', sprintf(static::ERR_ROUTE_FORMAT_OPTIONS, $name));
 
         foreach ($routes as $name => $route) {
             // merge group details into route details
+            $route = array_merge($details, $route);
             $route[static::PATH] = $path . $route[static::PATH] ?? '';
             $route[static::STACK] = array_merge($stack, $route[static::STACK] ?? []);
-            $route[static::OPTIONS] = array_merge($options, $route[static::OPTIONS] ?? []);
 
             $this->loadRoute($name, $route);
         }
     }
 
     /**
-     * Resolve a stack of references to a stack of callable methods
+     * Get the meta details for a route (everything other than defined keys)
      *
-     * @param array $stack
-     * @return callable[]
+     * @param array $details
+     * @return array
      */
-    private function resolveStack(array $stack) : array
+    private function getMeta(array $details) : array
     {
-        return array_map(function ($reference) {
-            return CallableResolver::resolve($this->container, $reference);
-        }, $stack);
+        return array_diff_key($details, array_flip([static::METHOD, static::PATH, static::STACK, static::ROUTES]));
     }
 }
